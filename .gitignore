@@ -1,0 +1,20 @@
+# môi trường / cache
+.venv/
+__pycache__/
+.DS_Store
+.claude/
+
+# dữ liệu cá nhân: giọng nói và nhật ký luyện tập
+recordings/
+logs/
+
+# tải lại được (app.py tự tải model; build_audio.py dựng lại bảng audio)
+models/
+data/audio/
+data/star_anhviet*
+data/vi-extract.jsonl.gz
+
+# bản cũ / sao lưu
+words_v2.json
+words_v3.json
+*.bak-*

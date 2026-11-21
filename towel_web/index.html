@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Leo Tháp</title>
+<meta name="description" content="Luyện phát âm tiếng Anh: nghe từ, nói lại, leo tháp. Chấm điểm bằng model ZIPA ngay trên máy.">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Tải model -->
+<section id="loading" class="screen">
+  <h1 class="title">▲ LEO THÁP</h1>
+  <p id="load-msg">Đang tải…</p>
+  <progress id="load-bar" max="1" value="0"></progress>
+  <p class="dim small">Phát âm được chấm ngay trên máy bạn bằng model ZIPA.</p>
+</section>
+
+<!-- Chọn mức -->
+<section id="start" class="screen" hidden>
+  <h1 class="title">▲ LEO THÁP</h1>
+  <p>Nghe từ tiếng Anh, bấm 🎤 và nói lại.<br>Nói đúng thì leo lên, sai thì rơi xuống dung nham.</p>
+  <h2 id="start-title">Chọn mức để bắt đầu</h2>
+  <div class="levels-start">
+    <button class="level" data-level="easy"><b>Dễ</b><small>từ rất thông dụng · <span data-count="easy"></span> từ</small></button>
+    <button class="level" data-level="mid"><b>Trung bình</b><small>từ thông dụng · <span data-count="mid"></span> từ</small></button>
+    <button class="level" data-level="hard"><b>Khó</b><small>từ ít gặp hơn · <span data-count="hard"></span> từ</small></button>
+  </div>
+  <p class="credits">Model ZIPA (anyspeech, CC BY 4.0) · bản ghi: Wiktionary / Wikimedia Commons</p>
+</section>
+
+<!-- Lỗi tải -->
+<section id="error" class="screen" hidden>
+  <h1 class="title">▲ LEO THÁP</h1>
+  <p id="error-msg" class="bad"></p>
+  <button class="tool" onclick="location.reload()">Tải lại</button>
+</section>
+
+<!-- Chơi -->
+<main id="game" hidden>
+  <header class="hud">
+    <div class="row"><span class="gold b">▲ LEO THÁP</span> <span id="hud-level" class="near"></span>
+      <span id="hud-word" class="dim"></span></div>
+    <div class="row floors">
+      <span>Tầng <b id="hud-floor">50</b><span class="dim"> / 100</span> <span id="hud-best" class="dim"></span></span>
+      <span class="bar"><i id="hud-bar"></i></span>
+    </div>
+    <div class="row"><span>Điểm <b id="hud-score">0</b></span> <b id="hud-combo"></b></div>
+    <div class="row small" id="hud-bet"></div>
+  </header>
+
+  <div class="tower-wrap"><canvas id="tower" aria-label="Tháp"></canvas></div>
+
+  <div id="log" class="log" aria-live="polite"></div>
+
+  <nav class="tools" id="tools">
+    <button class="tool" data-act="listen"><i>🔊</i>Nghe</button>
+    <button class="tool" data-act="slow"><i>🐢</i>Chậm</button>
+    <button class="tool" data-act="bet"><i>🎲</i>Cược</button>
+    <button class="tool" data-act="answer"><i>👁</i>Đáp án</button>
+    <button class="tool" data-act="next"><i>⏭</i>Từ mới</button>
+  </nav>
+  <nav class="tools" id="levels" hidden>
+    <button class="tool" data-act="lv:easy">↻ Dễ</button>
+    <button class="tool" data-act="lv:mid">↻ Trung bình</button>
+    <button class="tool" data-act="lv:hard">↻ Khó</button>
+  </nav>
+
+  <button id="talk" class="talk" data-state="wait"><span id="talk-label">…</span><i id="talk-meter"></i></button>
+</main>
+
+<noscript><p>Cần bật JavaScript để chơi.</p></noscript>
+<script src="js/tower.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+/* LEO THÁP: giao diện tối, ưu tiên điện thoại dọc. Canvas chỉ vẽ tháp; chữ, nút, nhật ký là thẻ HTML. */
+:root {
+  color-scheme: dark;
+  --bg: #000;
+  --panel: #111;
+  --btn: #262626;
+  --btn-hi: #3a3a3a;
+  --text: #e8e8e8;
+  --dim: #8a8a8a;
+  --ok: #4ade4a;
+  --near: #f5c842;
+  --bad: #ff5555;
+  --gold: #ffd75f;
+  --orange: #ffaf00;
+  --talk: #1f6f3a;
+  --rec: #b3261e;
+  --radius: 12px;
+  --gap: 8px;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: Menlo, "SF Mono", Consolas, "Roboto Mono", "Courier New", monospace;
+  /* tai thỏ, thanh home của iPhone */
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); }
+body {
+  font: 16px/1.4 var(--sans);
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;          /* không kéo giãn / tải lại trang khi vuốt */
+  touch-action: manipulation;         /* bỏ chạm đúp để phóng to, bấm nút không trễ */
+}
+[hidden] { display: none !important; }
+b, .b { font-weight: 700; }
+.dim { color: var(--dim); }
+.ok { color: var(--ok); }
+.near { color: var(--near); }
+.bad { color: var(--bad); }
+.gold { color: var(--gold); }
+.orange { color: var(--orange); }
+.small { font-size: 0.85em; }
+.mono { font-family: var(--mono); }
+
+button {
+  font: inherit; color: inherit; border: 0; cursor: pointer;
+  -webkit-user-select: none; user-select: none;
+  -webkit-touch-callout: none;        /* không hiện menu khi giữ lâu */
+  -webkit-tap-highlight-color: transparent;
+}
+button:disabled { opacity: 0.4; cursor: default; }
+button:focus-visible { outline: 2px solid var(--near); outline-offset: 2px; }
+
+/* ---------- màn hình tải / chọn mức / lỗi ---------- */
+.screen {
+  min-height: 100dvh;
+  max-width: 480px; margin: 0 auto;
+  padding: calc(24px + var(--safe-t)) calc(20px + var(--safe-r)) calc(20px + var(--safe-b)) calc(20px + var(--safe-l));
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  text-align: center;
+}
+.title { font-size: clamp(30px, 9vw, 44px); color: var(--gold); margin: 0 0 6px; }
+.screen p { margin: 0; }
+.screen h2 { font-size: 1.1rem; margin: 22px 0 4px; }
+progress { width: 80%; height: 10px; accent-color: var(--ok); }
+.levels-start { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.level {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 16px; border-radius: var(--radius); background: var(--btn);
+  border: 2px solid transparent;
+}
+.level b { font-size: 1.3rem; }
+.level small { color: var(--dim); }
+.level[aria-current="true"] { border-color: var(--ok); background: #24361f; }
+.level:active { background: var(--btn-hi); }
+.credits { margin-top: auto !important; padding-top: 20px; font-size: 0.72rem; color: #555; }
+
+/* ---------- màn hình chơi ---------- */
+#game {
+  height: 100dvh;
+  max-width: 520px; margin: 0 auto;
+  padding: calc(8px + var(--safe-t)) calc(10px + var(--safe-r)) calc(10px + var(--safe-b)) calc(10px + var(--safe-l));
+  display: grid; gap: var(--gap);
+  grid-template-rows: auto minmax(120px, 1fr) auto auto auto;
+  grid-template-areas: "hud" "tower" "log" "tools" "talk";
+}
+.hud { grid-area: hud; font-size: clamp(14px, 4.2vw, 17px); line-height: 1.35; }
+.hud .row { display: flex; gap: 0.8em; align-items: baseline; }
+.hud .floors { justify-content: space-between; align-items: center; }
+.bar { flex: 0 0 34%; height: 0.55em; border-radius: 1em; background: #303030; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 50%; border-radius: 1em; background: var(--ok); transition: width 0.4s; }
+
+.tower-wrap { grid-area: tower; position: relative; min-height: 0; background: #050505; border-radius: 6px; overflow: hidden; }
+#tower { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+.log {
+  grid-area: log;
+  height: 7.6em; overflow-y: auto; overscroll-behavior: contain;
+  padding: 6px 10px; border-radius: var(--radius); background: var(--panel);
+  font-size: clamp(13px, 3.7vw, 15px); line-height: 1.35;
+  -webkit-user-select: text; user-select: text;
+}
+.log p { margin: 0; white-space: pre-wrap; word-break: break-word; }
+.log p:empty { height: 0.5em; }
+
+.tools { grid-area: tools; display: flex; gap: var(--gap); }
+.tool {
+  flex: 1 1 0; min-width: 0; min-height: 48px; padding: 6px 4px;
+  border-radius: 10px; background: var(--btn);
+  font-size: clamp(12px, 3.4vw, 15px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+}
+.tool i { font-style: normal; font-size: 1.15em; line-height: 1.1; }
+.tool:active:not(:disabled) { background: var(--btn-hi); }
+.tool[aria-current="true"] { color: var(--near); box-shadow: inset 0 0 0 2px var(--near); }
+
+.talk {
+  grid-area: talk; position: relative; overflow: hidden;
+  min-height: 64px; border-radius: 16px; background: var(--talk);
+  font-size: clamp(18px, 5.4vw, 22px); font-weight: 700; color: #fff;
+}
+.talk[data-state="rec"] { background: var(--rec); }
+.talk[data-state="busy"] { background: #5a4a12; }
+.talk[data-state="wait"] { background: var(--btn); }
+.talk[data-state="mic"] { background: #6b4a12; }
+.talk[data-state="over"] { background: #2b4f8a; }
+.talk:active { filter: brightness(1.15); }
+#talk-meter {                         /* âm lượng micro khi đang nghe */
+  position: absolute; left: 12px; bottom: 8px; height: 5px; border-radius: 3px;
+  width: calc((100% - 24px) * var(--level, 0)); background: #ffd0cc; transition: width 0.08s;
+}
+.talk:not([data-state="rec"]) #talk-meter { display: none; }
+
+/* máy tính bảng / máy tính nằm ngang: tháp bên trái, bảng điều khiển bên phải */
+@media (min-width: 760px) and (min-aspect-ratio: 5/4) {
+  #game {
+    max-width: 1100px;
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "tower hud" "tower log" "tower tools" "tower talk";
+    column-gap: 16px;
+  }
+  .log { height: auto; min-height: 8em; }
+}
+/* điện thoại nằm ngang: thấp, bỏ bớt khoảng */
+@media (max-height: 480px) and (orientation: landscape) {
+  #game {
+    max-width: none;
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "tower hud" "tower log" "tower tools" "tower talk";
+    column-gap: 12px;
+  }
+  .log { height: auto; }
+  .talk { min-height: 52px; }
+  .tool { min-height: 42px; }
+}
