@@ -25,13 +25,15 @@
 <section id="start" class="screen" hidden>
   <h1 class="title">▲ LEO THÁP</h1>
   <p>Nghe từ tiếng Anh, bấm 🎤 và nói lại.<br>Nói đúng thì leo lên, sai thì rơi xuống dung nham.</p>
-  <h2 id="start-title">Chọn mức để bắt đầu</h2>
+  <h2 id="start-title">Chọn cấp độ để bắt đầu</h2>
   <div class="levels-start">
-    <button class="level" data-level="easy"><b>Dễ</b><small>từ rất thông dụng · <span data-count="easy"></span> từ</small></button>
-    <button class="level" data-level="mid"><b>Trung bình</b><small>từ thông dụng · <span data-count="mid"></span> từ</small></button>
-    <button class="level" data-level="hard"><b>Khó</b><small>từ ít gặp hơn · <span data-count="hard"></span> từ</small></button>
+    <button class="level" data-level="a1"><b>A1</b><small>mới bắt đầu · <span data-count="a1"></span> từ</small></button>
+    <button class="level" data-level="a2"><b>A2</b><small>sơ cấp · <span data-count="a2"></span> từ</small></button>
+    <button class="level" data-level="b1"><b>B1</b><small>trung cấp · <span data-count="b1"></span> từ</small></button>
+    <button class="level" data-level="b2"><b>B2</b><small>trung cấp trên · <span data-count="b2"></span> từ</small></button>
+    <button class="level" data-level="c1"><b>C1</b><small>cao cấp · <span data-count="c1"></span> từ</small></button>
   </div>
-  <p class="credits">Model ZIPA (anyspeech, CC BY 4.0) · bản ghi: Wiktionary / Wikimedia Commons</p>
+  <p class="credits">Model ZIPA (anyspeech, CC BY 4.0) · danh sách từ, cấp độ, audio: Oxford Learner's Dictionaries © Oxford University Press · nghĩa: thichhoc-dict (CC BY-SA 4.0), Wiktionary, OVDP</p>
 </section>
 
 <!-- Lỗi tải -->
@@ -66,9 +68,11 @@
     <button class="tool" data-act="next"><i>⏭</i>Từ mới</button>
   </nav>
   <nav class="tools" id="levels" hidden>
-    <button class="tool" data-act="lv:easy">↻ Dễ</button>
-    <button class="tool" data-act="lv:mid">↻ Trung bình</button>
-    <button class="tool" data-act="lv:hard">↻ Khó</button>
+    <button class="tool" data-act="lv:a1">↻ A1</button>
+    <button class="tool" data-act="lv:a2">↻ A2</button>
+    <button class="tool" data-act="lv:b1">↻ B1</button>
+    <button class="tool" data-act="lv:b2">↻ B2</button>
+    <button class="tool" data-act="lv:c1">↻ C1</button>
   </nav>
 
   <button id="talk" class="talk" data-state="wait"><span id="talk-label">…</span><i id="talk-meter"></i></button>

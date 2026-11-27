@@ -5,11 +5,10 @@ torch
 huggingface_hub
 # Model Koel (mặc định) và model cũ XLSR-53
 transformers
-# Ghi âm, phím, từ điển (cmudict: phát âm Mỹ chuẩn)
+# Ghi âm, từ điển (cmudict: phát âm Mỹ chuẩn)
 numpy
 sounddevice
 rtmixer          # thu micro bằng callback C (không lách tách khi --game đang vẽ)
-pynput
 phonemizer
 wordfreq
 rapidfuzz

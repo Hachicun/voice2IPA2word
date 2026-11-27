@@ -12,7 +12,7 @@ const f32 = (p) => new Float32Array(buf(p));
 
 (async () => {
   ort.env.wasm.numThreads = 1;
-  const pool = ["easy", "mid", "hard"].flatMap((b) => JSON.parse(fs.readFileSync(path.join(WEB, "data", `pool_${b}.json`), "utf8")));
+  const pool = ["a1", "a2", "b1", "b2", "c1"].flatMap((b) => JSON.parse(fs.readFileSync(path.join(WEB, "data", `pool_${b}.json`), "utf8")));
   V2I.init({ fbankBuf: buf(path.join(WEB, "data", "fbank.bin")), lexBuf: buf(path.join(WEB, "data", "lex.bin")),
     lexJson: JSON.parse(fs.readFileSync(path.join(WEB, "data", "lex.json"), "utf8")),
     words: JSON.parse(fs.readFileSync(path.join(WEB, "data", "words.json"), "utf8")) });

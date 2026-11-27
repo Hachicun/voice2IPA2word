@@ -9,12 +9,8 @@
   const CACHE = "towel-model-v1";
   const COLS = 30;                                      // bề rộng tháp (ô chữ)
   const SLOW_FACTOR = 0.7;
-  // Bản ghi giọng Mỹ: bảng {từ: đường dẫn mp3} dựng sẵn từ dump Wiktionary (build_audio.py, cách của english_dictionary)
-  const COMMONS = "https://upload.wikimedia.org/wikipedia/commons/";
-  const LEVELS = {                                    // như --level của bản terminal (khoảng zipf)
-    easy: { name: "Dễ", bands: ["easy"] },
-    mid: { name: "Trung bình", bands: ["easy", "mid"] },
-    hard: { name: "Khó", bands: ["hard"] },
+  const LEVELS = {                                    // cấp độ CEFR, như --level của bản terminal
+    a1: { name: "A1" }, a2: { name: "A2" }, b1: { name: "B1" }, b2: { name: "B2" }, c1: { name: "C1" },
   };
   const params = new URLSearchParams(location.search);
   const $ = (id) => document.getElementById(id);
@@ -55,9 +51,16 @@
   let ac = null;                                      // AudioContext (mở khi chạm lần đầu)
   let playing = null;                                 // nguồn đang phát
   let playEnd = 0;                                    // thời điểm (performance.now) phát xong
+  // Từ mẫu phát bằng 1 thẻ <audio>: máy chủ Oxford không gửi header CORS nên không fetch / decode được.
+  const player = new Audio();
+  player.preservesPitch = player.webkitPreservesPitch = true;      // phát chậm vẫn giữ cao độ
+  let playToken = 0;                                  // đổi mỗi lần dừng: bỏ qua lỗi của lần phát cũ
   function stopPlayback() {
     if (playing) { try { playing.stop(); } catch (e) { /* đã dừng */ } playing = null; }
     playEnd = 0;
+    playToken++;
+    player.onerror = null;
+    player.pause();
     if (window.speechSynthesis) speechSynthesis.cancel();
   }
   function playSamples(x, sr) {                       // Float32Array mono
@@ -70,37 +73,17 @@
     playEnd = performance.now() + (x.length / sr) * 1000;
     src.onended = () => { if (playing === src) { playing = null; playEnd = 0; } };
   }
-  function pad(x, sr, a, b) {                         // TTS_PAD: loa/tai nghe Bluetooth hay cắt âm đầu/cuối
-    const out = new Float32Array(x.length + Math.round((a + b) * sr));
-    out.set(x, Math.round(a * sr));
-    return out;
+  function silentWav() {                              // 0,05 s im lặng (WAV 8 bit, 8 kHz)
+    const n = 400, b = new Uint8Array(44 + n).fill(128, 44), v = new DataView(b.buffer);
+    const text = (o, t) => { for (let i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); };
+    text(0, "RIFF"); v.setUint32(4, 36 + n, true); text(8, "WAVEfmt "); v.setUint32(16, 16, true);
+    v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true);
+    v.setUint16(32, 1, true); v.setUint16(34, 8, true); text(36, "data"); v.setUint32(40, n, true);
+    return URL.createObjectURL(new Blob([b], { type: "audio/wav" }));
   }
-  function timeStretch(x, sr, factor) {               // WSOLA, như time_stretch() ở app.py
-    const win = Math.floor(0.04 * sr), hopOut = Math.floor(win / 2), hopIn = Math.max(1, Math.floor(hopOut * factor));
-    const tol = Math.floor(0.01 * sr);
-    const w = new Float32Array(win);
-    for (let i = 0; i < win; i++) w[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (win - 1));
-    const xx = new Float32Array(tol + x.length + 2 * win + tol);
-    xx.set(x, tol);
-    const out = new Float32Array(Math.floor(xx.length / factor) + 2 * win), norm = new Float32Array(out.length);
-    let posIn = tol, posOut = 0, prev = -1;
-    while (posIn + win + tol < xx.length && posOut + win < out.length) {
-      let best = posIn;
-      if (prev >= 0) {
-        let bv = -Infinity;
-        for (let o = 0; o <= 2 * tol; o++) {
-          let s = 0;
-          const a = posIn - tol + o, b = prev + hopOut;
-          for (let i = 0; i < win; i += 2) s += xx[a + i] * xx[b + i];
-          if (s > bv) { bv = s; best = a; }
-        }
-      }
-      for (let i = 0; i < win; i++) { out[posOut + i] += xx[best + i] * w[i]; norm[posOut + i] += w[i]; }
-      prev = best; posIn += hopIn; posOut += hopOut;
-    }
-    const res = new Float32Array(posOut);
-    for (let i = 0; i < posOut; i++) res[i] = out[i] / Math.max(norm[i], 1e-3);
-    return res;
+  function unlockPlayer() {                           // iOS: thẻ <audio> phải phát lần đầu ngay trong cú chạm
+    player.src = silentWav();
+    player.play().catch(() => {});
   }
 
   // tiếng hiệu ứng (thay âm thanh hệ thống macOS của bản terminal)
@@ -188,33 +171,22 @@
     }
   }
 
-  // ---------- kho từ + bản ghi giọng Mỹ (Wikimedia Commons), dự phòng giọng máy ----------
-  const BANDS = {};                                   // easy | mid | hard -> [mục từ]
-  let level = "mid", pool = [], poolPos = 0;
+  // ---------- kho từ + audio giọng Mỹ của Oxford, dự phòng giọng máy ----------
+  const BANDS = {};                                   // a1 … c1 -> [mục từ]
+  let level = "a1", pool = [], poolPos = 0;
   function setLevel(lv) {
     level = lv;
-    pool = LEVELS[lv].bands.flatMap((b) => BANDS[b]);
+    pool = BANDS[lv].slice();
     for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
     poolPos = 0;
     try { localStorage.setItem("towel-level", lv); } catch (e) { /* không lưu được: thôi */ }
   }
-  async function loadClip(e) {                        // -> {x, sr} đã chuẩn hoá âm lượng 0.8; lỗi: ném lỗi
-    if (e.clip) return e.clip;
-    const r = await fetch(COMMONS + e.a);
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    const ab = await ac.decodeAudioData(await r.arrayBuffer());
-    const x = ab.getChannelData(0).slice();
-    let pk = 1e-3; for (let i = 0; i < x.length; i++) pk = Math.max(pk, Math.abs(x[i]));
-    for (let i = 0; i < x.length; i++) x[i] *= 0.8 / pk;
-    e.clip = { x, sr: ab.sampleRate };
-    return e.clip;
-  }
-  async function findWord() {                         // tải trước bản ghi; lỗi (mất mạng…) thì giọng máy đọc
+  function findWord() {
     if (poolPos >= pool.length) setLevel(level);      // hết vòng: xáo lại
-    const e = pool[poolPos++];
-    try { await loadClip(e); } catch (err) { e.tts = true; }
-    return e;
+    return pool[poolPos++];
   }
+  const preloader = new Audio();                      // tải sẵn audio từ kế tiếp vào cache của trình duyệt
+  preloader.preload = "auto";
   // giọng máy (Web Speech): giọng Mỹ cài sẵn tốt nhất, bỏ giọng "novelty" của Apple (như english_dictionary)
   const NOVELTY = /Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox/;
   let voice = null;
@@ -235,14 +207,18 @@
   }
   function say(e, slow) {
     if (!e) return;
-    if (e.clip) {
-      let x = e.clip.x;
-      if (slow) { e.slowClip = e.slowClip || timeStretch(x, e.clip.sr, SLOW_FACTOR); x = e.slowClip; }
-      playSamples(pad(x, e.clip.sr, 0.15, 0.4), e.clip.sr);
-    } else {
-      stopPlayback();
+    stopPlayback();
+    const token = playToken;
+    const fallback = () => {                          // mất mạng, link hỏng…: giọng máy đọc
+      if (token !== playToken) return;
+      playToken++;
+      log(["  (giọng máy đọc)", COL.dim]);
       speak(e.w, slow);
-    }
+    };
+    player.onerror = fallback;
+    player.src = e.a;
+    player.defaultPlaybackRate = player.playbackRate = slow ? SLOW_FACTOR : 1;
+    player.play().catch(fallback);
   }
 
   // ---------- chấm điểm (worker) ----------
@@ -303,7 +279,6 @@
   const tower = new Tower({ sfx, onOver });
   let word = null;                                    // {entry, best, tries, revealed, correct, last}
   let busy = false;                                   // đang chấm
-  let finding = false;
   let history = [];
   const rounds = [];
 
@@ -314,25 +289,20 @@
     else log([`🔥 Rơi vào dung nham sau ${tower.words} từ (cao nhất tầng ${tower.best}).`, COL.bad, true]);
   }
 
-  async function newWord() {
-    if (finding) return;
-    finding = true;
+  function newWord() {
     if (word) history.push(word);
     word = null;
     stopPlayback();
-    const e = await findWord();
-    finding = false;
+    const e = findWord();
     if (!e) { log(["Không có từ nào ở mức này.", COL.bad]); return; }
     word = { entry: e, best: 0, tries: 0, revealed: false, correct: false, last: null };
     tower.beginWord(e.hard);
     const [win, lose] = tower.betOdds();
     log();
     log([`── Từ #${tower.words} ──`, COL.bold, true], ["  🔊  ", COL.text],
-      [`từ ${e.hard ? "KHÓ" : "DỄ"} · cược +${win}/−${lose}`, COL.dim]);
+      [`${e.lv} · từ ${e.hard ? "DÀI" : "NGẮN"} · cược +${win}/−${lose}`, COL.dim]);
     say(e);
-    if (!e.clip) log(["  (giọng máy đọc)", COL.dim]);
-    const nxt = pool[poolPos];                        // tải sẵn bản ghi từ kế tiếp
-    if (nxt) loadClip(nxt).catch(() => {});
+    if (pool[poolPos]) preloader.src = pool[poolPos].a;
   }
 
   function reveal() {
@@ -423,7 +393,7 @@
       const why = t.placeBet();
       if (why) { log([`  Không cược được: ${why}.`, COL.dim]); return; }
       const [win, lose] = t.betOdds();
-      log([`  🎲 Đã cược từ ${t.cur.hard ? "khó" : "dễ"}: nói đúng ngay +${win} tầng, sai −${lose}, gần đúng mất lượt.`, COL.near]);
+      log([`  🎲 Đã cược từ ${t.cur.hard ? "dài" : "ngắn"}: nói đúng ngay +${win} tầng, sai −${lose}, gần đúng mất lượt.`, COL.near]);
       t.push(["bet", 0, false]);
     } else if (id === "answer" || id === "next") {
       if (word && !word.correct) {
@@ -476,8 +446,8 @@
   // máy tính: Space như nút nói (bấm để nói, bấm lần nữa để dừng), phím tắt như bản terminal
   document.addEventListener("keydown", (e) => {
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (screen === "tap") {                           // 1 2 3 chọn mức, Enter/Space: mức lần trước
-      const lv = { "1": "easy", "2": "mid", "3": "hard" }[e.key] || ((e.key === " " || e.key === "Enter") && level);
+    if (screen === "tap") {                           // 1–5 chọn cấp, Enter/Space: cấp lần trước
+      const lv = { "1": "a1", "2": "a2", "3": "b1", "4": "b2", "5": "c1" }[e.key] || ((e.key === " " || e.key === "Enter") && level);
       if (lv) { e.preventDefault(); begin(lv); }
       return;
     }
@@ -494,6 +464,7 @@
     show("starting");
     $("start-title").textContent = "Đang mở micro…";
     setLevel(lv);
+    unlockPlayer();
     try {
       ac = ac || new (window.AudioContext || window.webkitAudioContext)();
       const resumed = ac.resume();
@@ -576,7 +547,7 @@
     const c = g.cur;
     let bet = `Cược <b class="${g.bets ? "orange" : "dim"}">${g.bets} lượt</b> <span class="dim">đúng ngay ${g.firsts % MILESTONE}/${MILESTONE}</span>`;
     if (c && !c.done && !c.gaveUp) {
-      const [win, lose] = BET[c.hard], kind = c.hard ? "KHÓ" : "DỄ";
+      const [win, lose] = BET[c.hard], kind = c.hard ? "DÀI" : "NGẮN";
       if (c.bet && !c.tries) bet += ` <b class="orange">ĐANG CƯỢC ${kind} +${win}/−${lose}</b>`;
       else if (!c.tries && !c.bet) bet += ` <span class="dim">từ ${kind}: +${win}/−${lose}</span>`;
     }
@@ -586,7 +557,7 @@
     if (g.over) { state = "over"; label = "↻  CHƠI LẠI"; }
     else if (rec) { state = "rec"; label = "●  ĐANG GHI… bấm để dừng"; }
     else if (busy) { state = "busy"; label = "…  đang chấm"; }
-    else if (finding || !word) { state = "wait"; label = "…  đang tìm từ"; }
+    else if (!word) { state = "wait"; label = "…  đang tìm từ"; }
     else if (!micStream && !params.has("nomic")) { state = "mic"; label = "🎤  BẬT MICRO"; }
     else { state = "idle"; label = "🎤  BẤM ĐỂ NÓI"; }
     set("talk", "data-state", state);
@@ -615,12 +586,12 @@
     requestAnimationFrame(frame);
     const progress = setInterval(() => { $("load-msg").textContent = loadMsg; $("load-bar").value = loadFrac; }, 100);
     try {
-      const bands = ["easy", "mid", "hard"];
+      const bands = Object.keys(LEVELS);
       const [model, ...lists] = await Promise.all([fetchModel(), ...bands.map((b) => fetch(`data/pool_${b}.json`).then((r) => r.json()))]);
       bands.forEach((b, i) => { BANDS[b] = lists[i]; });
-      try { const lv = localStorage.getItem("towel-level"); if (LEVELS[lv]) level = lv; } catch (e) { /* mặc định: mid */ }
+      try { const lv = localStorage.getItem("towel-level"); if (LEVELS[lv]) level = lv; } catch (e) { /* mặc định: a1 */ }
       for (const el of document.querySelectorAll("[data-count]"))
-        el.textContent = LEVELS[el.dataset.count].bands.reduce((s, k) => s + BANDS[k].length, 0).toLocaleString("vi");
+        el.textContent = BANDS[el.dataset.count].length.toLocaleString("vi");
       for (const b of document.querySelectorAll("[data-level]")) b.setAttribute("aria-current", String(b.dataset.level === level));
       loadMsg = "Khởi động model…";
       await startWorker(model);

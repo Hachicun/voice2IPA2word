@@ -47,7 +47,7 @@ MAX_TIER = 5
 # Luật thưởng phạt (ngoài +2 đúng ngay · +1 đúng sau vài lần · 0 gần đúng · −1 sai):
 GIVE_UP = 2                # A (xem đáp án) / N (bỏ qua) khi chưa nói đúng: −2 tầng, 1 lần mỗi từ; sau A luyện tự do
 MILESTONE = 5              # mỗi 5 từ nói đúng ngay lần đầu (mốc 5, 10, 15…): nhặt 1 lượt cược
-BET = {False: (4, 4), True: (8, 10)}   # cược (thắng, thua) theo lần nói đầu: từ dễ (1 âm tiết) / khó (≥ 2 âm tiết)
+BET = {False: (4, 4), True: (8, 10)}   # cược (thắng, thua) theo lần nói đầu: từ ngắn (1 âm tiết) / dài (≥ 2 âm tiết)
 
 POSES = {  # 3 dòng, từ đầu xuống chân
     "stand": (" o ", "/|\\", "/ \\"),
@@ -456,7 +456,7 @@ class Tower:
             + C(f"    đúng ngay {self.firsts % MILESTONE}/{MILESTONE}", 244)
         if c and not c.done and not c.gave_up:
             win, lose = BET[c.hard]
-            kind = "KHÓ" if c.hard else "DỄ"
+            kind = "DÀI" if c.hard else "NGẮN"
             if c.bet and not c.tries:
                 line += "    " + C(f"ĐANG CƯỢC từ {kind}: +{win} / −{lose}", 214, True)
             elif not c.tries and not c.bet:
@@ -730,7 +730,7 @@ class FakeWords:
         hard = len(_VOWEL.findall(self.cur[1])) >= 2
         self.g.begin_word(hard)
         win, lose = self.g.bet_odds()
-        print(f"\n{C(f'── Từ #{self.g.words} ──', 15, True)}  🔊  " + C(f"từ {'KHÓ' if hard else 'DỄ'}"
+        print(f"\n{C(f'── Từ #{self.g.words} ──', 15, True)}  🔊  " + C(f"từ {'DÀI' if hard else 'NGẮN'}"
                                                                       f" · cược +{win}/−{lose}", 244))
 
     def bet(self) -> bool:

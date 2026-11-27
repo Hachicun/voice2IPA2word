@@ -8,13 +8,10 @@ __pycache__/
 recordings/
 logs/
 
-# tải lại được (app.py tự tải model; build_audio.py dựng lại bảng audio)
+# tải lại được (app.py tự tải model; data/audio_ox/ tải dần khi chơi)
 models/
-data/audio/
-data/star_anhviet*
-data/vi-extract.jsonl.gz
+data/audio_ox/
 
-# bản cũ / sao lưu
-words_v2.json
-words_v3.json
+# file không còn dùng, bản cũ, từ điển chỉ cần khi dựng lại words_v4.json
+archive/
 *.bak-*

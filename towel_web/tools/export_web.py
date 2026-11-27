@@ -2,6 +2,7 @@
 """Xuất dữ liệu cho bản web (towel_web/): model ZIPA, bảng fbank, từ điển CTC, kho từ.
 Chạy từ thư mục gốc dự án (cần .venv của app.py):
     V2I_MODEL=zipa .venv/bin/python towel_web/tools/export_web.py
+Chỉ đổi kho từ (cấp độ, audio, nghĩa; không đụng model, fbank, từ điển CTC): thêm --pools.
 
 Tạo ra (trong towel_web/):
   model/model.int8.onnx, model/tokens.txt     ZIPA small (anyspeech/zipa-small-crctc-300k, CC BY 4.0)
@@ -9,9 +10,8 @@ Tạo ra (trong towel_web/):
   data/lex.bin       từ điển CTC của ZIPA (LEX_ZIPA ở app.py) dạng nhị phân, xem lex_bin()
   data/lex.json      token -> lớp âm, để tính _class_logp bằng tra bảng
   data/words.json    {w: [từ...], z: [zipf...]} theo thứ tự WORD_LIST (để xếp hạng từ đích)
-  data/pool_<dải>.json  từ để chơi theo dải zipf: easy (>= 5), mid (4–5), hard (3–4). Mức dễ = easy,
-                     trung bình = easy + mid (zipf >= 4, như --level mid), khó = hard. Chỉ từ có bản ghi giọng Mỹ
-                     trong data/audio_us.json (build_audio.py); mỗi từ: IPA, âm, nghĩa, khó/dễ, đường dẫn mp3.
+  data/pool_<cấp>.json  từ để chơi theo cấp độ CEFR: a1, a2, b1, b2, c1. Chỉ từ có audio giọng Mỹ trong
+                     data/oxford_us.json (build_oxford.py); mỗi từ: cấp, IPA, âm, nghĩa, từ dài/ngắn, link mp3.
 """
 import json
 import os
@@ -30,7 +30,6 @@ import numpy as np  # noqa: E402
 import app  # noqa: E402
 import ipa_us  # noqa: E402
 
-BANDS = {"easy": (5.0, 99.0), "mid": (4.0, 5.0), "hard": (3.0, 4.0)}
 
 
 def out(*p):
@@ -99,22 +98,27 @@ def words_json():
 
 
 def pool_json():
-    if not app.AUDIO_US:
-        sys.exit("Chưa có data/audio_us.json: chạy `python3 build_audio.py` trước.")
+    if not app.AUDIO:
+        sys.exit("Chưa có data/oxford_us.json: chạy `python3 build_oxford.py` trước.")
     sizes = {}
-    old = out("data", "pool.json")
-    if os.path.exists(old):
-        os.remove(old)                               # bản cũ (chỉ mức mid)
-    for band, (lo, hi) in BANDS.items():
-        pool = [{"w": w, "ipa": e["ipa"], "ph": e["ph"], "vi": e["vi"], "hard": app.is_hard(w), "a": app.AUDIO_US[w]}
-                for w, e in app.WORDS.items() if lo <= e["zipf"] < hi and len(w) >= 3 and w in app.AUDIO_US]
-        with open(out("data", f"pool_{band}.json"), "w", encoding="utf-8") as f:
+    for old in ("pool", "pool_easy", "pool_mid", "pool_hard"):      # kho từ kiểu cũ
+        path = out("data", old + ".json")
+        if os.path.exists(path):
+            os.remove(path)
+    for level in app.CEFR:
+        pool = [{"w": w, "lv": level, "ipa": e["ipa"], "ph": e["ph"], "vi": e["vi"], "hard": app.is_hard(w),
+                 "a": app.AUDIO[w]}
+                for w, e in app.WORDS.items() if e.get("level") == level and len(w) >= 3 and w in app.AUDIO]
+        with open(out("data", f"pool_{level.lower()}.json"), "w", encoding="utf-8") as f:
             json.dump(pool, f, ensure_ascii=False, separators=(",", ":"))
-        sizes[band] = len(pool)
+        sizes[level] = len(pool)
     return sizes
 
 
 if __name__ == "__main__":
+    if "--pools" in sys.argv[1:]:
+        print(f"pool {pool_json()}")
+        sys.exit()
     copy_model()
     fbank_bin()
     n = lex_bin()

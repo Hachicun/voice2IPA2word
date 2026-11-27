@@ -1,6 +1,7 @@
 """
-Giữ SPACE để ghi âm 1 từ tiếng Anh, nhả ra -> phát lại bản ghi + IPA -> từ -> nghĩa tiếng Việt.
-Nghĩa lấy offline từ từ điển Anh-Việt OVDP (thư mục data/).
+Bấm SPACE để ghi âm 1 từ tiếng Anh, bấm lần nữa để dừng -> phát lại bản ghi + IPA -> từ -> nghĩa tiếng Việt.
+Cấp độ A1-C1, audio giọng Mỹ và nghĩa lấy từ bộ Oxford 5000 (data/oxford_us.json, build_oxford.py); từ ngoài bộ
+này dùng nghĩa Wiktionary / OVDP sẵn có trong words_v4.json.
 Chạy hoàn toàn trên terminal. IPA (cả của model lẫn từ điển) ghi theo Anh Mỹ - Cambridge Dictionary, xem ipa_us.py.
 
 Cài đặt (1 lần, macOS):
@@ -10,25 +11,24 @@ Cài đặt (1 lần, macOS):
 
 Chạy:
     python app.py
-    -> Giữ SPACE để nói, nhả ra để dừng. Esc hoặc Ctrl+C để thoát.
+    -> Bấm SPACE để ghi, bấm lần nữa để dừng. Esc hoặc Ctrl+C để thoát. Cần chạy trong terminal tương tác.
     Mỗi lần ghi được lưu ở recordings/<phiên>/NN_<từ>.wav, log ở logs/<phiên>.log.
 
 Chế độ đoán từ: máy đọc 1 từ ngẫu nhiên (không hiện chữ), bạn nói lại, chấm % giống IPA của từ đó.
-    python app.py --guess                       # mức mid: từ thông dụng (zipf >= 4)
-    python app.py --guess --level easy          # easy (zipf >= 5) | mid | hard (zipf 3-4) | all
-    python app.py --fetch-audio --level mid     # tải sẵn bản ghi của 1 mức để chơi offline (Ctrl+C dừng, chạy lại làm tiếp)
-    -> giữ SPACE nói lại · R nghe lại · S nghe chậm · A/Enter xem đáp án · N từ mới · Esc thoát
+    python app.py --guess                       # cấp A1 (mặc định)
+    python app.py --guess --level b1            # a1 | a2 | b1 | b2 | c1 | all (cấp độ CEFR theo Oxford)
+    python app.py --fetch-audio --level a1      # tải sẵn audio của 1 cấp để chơi offline (Ctrl+C dừng, chạy lại làm tiếp)
+    -> bấm SPACE, nói lại, bấm SPACE dừng · R nghe lại · S nghe chậm · A/Enter xem đáp án · N từ mới · Esc thoát
        M: giọng máy đọc đúng các âm model nghe được từ bạn, rồi phát bản ghi chuẩn (so sánh).
           Dùng AVSpeechSynthesizer của macOS qua ipa_say.swift, tự biên dịch lần đầu (cần swiftc).
-    Từ mẫu: bản ghi giọng người (Mỹ) của Wiktionary trên Wikimedia Commons. Bảng {từ: file mp3} data/audio_us.json
-    dựng sẵn từ bản dump Wiktionary của kaikki.org (python3 build_audio.py, như ~/english_dictionary), không hỏi
-    API nào; mỗi file tải 1 lần vào data/audio/ (lần sau offline). Chỉ chơi từ có bản ghi; tải lỗi (mất mạng,
-    bị chặn) thì giọng máy macOS đọc thay: giọng tốt nhất đã cài (Ava Premium...), đổi bằng V2I_VOICE="Tên giọng".
+    Từ mẫu: audio giọng Mỹ của Oxford Learner's Dictionaries (link trong data/oxford_us.json); mỗi file tải 1 lần
+    vào data/audio_ox/ (lần sau offline). Chỉ chơi từ trong bộ Oxford 5000 có audio; tải lỗi (mất mạng, bị chặn)
+    thì giọng máy macOS đọc thay: giọng tốt nhất đã cài (Ava Premium...), đổi bằng V2I_VOICE="Tên giọng".
     Âm giống >= 90% hoặc model nhận ra đúng từ (chấm CTC, từ đích đứng đầu) = nói đúng, tự hiện đáp án.
     Tắt bộ gõ tiếng Việt (Telex/VNI) khi chơi, kẻo phím S/R/A bị nuốt. Xanh = âm đúng, vàng = gần đúng, đỏ = sai/thừa, _ = thiếu âm.
 
 Game leo tháp: như chế độ đoán từ, kèm nhân vật leo tháp vẽ ngay trong terminal (tower.py).
-    python app.py --game                        # --level easy | mid | hard | all như --guess
+    python app.py --game                        # --level a1 | a2 | b1 | b2 | c1 | all như --guess
     -> bắt đầu ở tầng 50, lên tầng 100 thắng, rơi về 0 (dung nham) thua. Đúng ngay lần đầu +2 tầng, đúng sau
        vài lần +1, gần đúng (60-89%) đứng yên, sai rơi 1 tầng. Xem đáp án (A) trước khi nói đúng thì từ đó không
        được lên tầng. Phím như --guess; hết ván bấm N chơi lại. Tắt tiếng hiệu ứng: V2I_SFX=0.
@@ -39,11 +39,11 @@ Game leo tháp: như chế độ đoán từ, kèm nhân vật leo tháp vẽ ng
 Chế độ săn từ theo âm, dạng THẮP CHÒM SAO (chơi 1 mình, vẽ bằng stars.py): chọn 1 hay vài âm (nguyên âm, phụ âm),
 mỗi từ chứa đủ các âm đó thắp 1 ngôi sao; đủ sao thì nối thành chòm sao (nhà, cá, thuyền, mèo, diều) và chòm
 sống dậy, rồi bầu trời trôi sang chòm kế. Không tính giờ, nói sai không mất gì.
-    python app.py --hunt                        # hỏi chọn âm (số hoặc ký hiệu IPA), từ gợi ý mức mid
-    python app.py --hunt --sounds "æ t"         # chọn sẵn âm; --level easy | mid | hard | all như --guess
-    -> giữ SPACE nói 1 từ. Model nhận ra từ trong từ điển; hợp lệ khi chứa đủ các âm và chưa thắp.
-       Tự nghĩ ra từ: sao sáng ✦, điểm = 10 × số âm mục tiêu trong từ, nhân thêm khi từ ít gặp / dài; từ khó
-       (zipf < 4 hoặc >= 7 âm) thành sao vàng. Phát âm >= 90% thêm 5 điểm.
+    python app.py --hunt                        # hỏi chọn âm (số hoặc ký hiệu IPA), từ gợi ý mọi cấp
+    python app.py --hunt --sounds "æ t"         # chọn sẵn âm; --level a1 | a2 | b1 | b2 | c1 | all như --guess
+    -> bấm SPACE, nói 1 từ, bấm SPACE dừng. Model nhận ra từ trong từ điển; hợp lệ khi chứa đủ các âm và chưa thắp.
+       Tự nghĩ ra từ: sao sáng ✦, điểm = 10 × số âm mục tiêu trong từ, nhân thêm theo cấp độ / độ dài; từ khó
+       (B2, C1 hoặc >= 7 âm; từ ngoài bộ Oxford: zipf < 4) thành sao vàng. Phát âm >= 90% thêm 5 điểm.
        Bí: G = gợi ý 1 từ (bản ghi người thật nếu có, không thì giọng máy macOS), đọc theo giống >= 80%:
        sao mờ ✧, 1/3 điểm. G lần nữa: từ gợi ý khác · N bỏ gợi ý · R nghe lại · S nghe chậm · L từ đã thắp.
        Xem thử không cần micro: python3 stars.py
@@ -63,8 +63,6 @@ Cách chọn từ (Koel, ZIPA): chấm từng từ trong từ điển bằng xá
 
 Quyền macOS (lần đầu):
     System Settings > Privacy & Security > Microphone      -> bật cho app Terminal/iTerm
-    System Settings > Privacy & Security > Input Monitoring -> bật cho app Terminal/iTerm
-    (cần để bắt sự kiện nhả phím; bật xong phải mở lại terminal)
 """
 import json
 import os
@@ -101,9 +99,9 @@ XLSR_MODEL = "facebook/wav2vec2-xlsr-53-espeak-cv-ft"     # model cũ, ~1.2 GB
 KOEL_MODEL = "KoelLabs/xlsr-english-01"                   # wav2vec2 chuyên tiếng Anh, ~1.2 GB, bị khoá (cần xin quyền)
 # Nguồn nghĩa chính: Wiktionary tiếng Việt (kaikki.org, CC BY-SA, cập nhật hằng tuần, có từ mới như
 # selfie, smartphone). Từ nào Wiktionary chưa có thì lấy từ OVDP (StarDict, cũ hơn).
-WIKTIONARY = os.path.join(HERE, "data", "vi-extract.jsonl.gz")
+WIKTIONARY = os.path.join(HERE, "archive", "vi-extract.jsonl.gz")
 WIKTIONARY_URL = "https://kaikki.org/dictionary/downloads/vi/vi-extract.jsonl.gz"
-STARDICT = os.path.join(HERE, "data", "star_anhviet")   # từ điển Anh-Việt (OVDP), dự phòng
+STARDICT = os.path.join(HERE, "archive", "star_anhviet")  # từ điển Anh-Việt (OVDP), dự phòng; chỉ cần khi dựng lại
 WORDS_FILE = os.path.join(HERE, "words_v4.json")       # cache: từ -> IPA (Cambridge US), nghĩa, độ phổ biến
 N_WORDS = 40000          # số từ đưa vào từ điển
 SCAN_WORDS = 150000      # số từ thông dụng (wordfreq) được xét
@@ -222,7 +220,7 @@ def load_wiktionary(path: str) -> dict[str, dict]:
     "abbr": chỉ là viết tắt}}. Chỉ lấy mục tiếng Anh."""
     import gzip
     if not os.path.exists(path):
-        print(f"(Chưa có {os.path.basename(path)}: tải từ {WIKTIONARY_URL} vào thư mục data/"
+        print(f"(Chưa có {os.path.basename(path)}: tải từ {WIKTIONARY_URL} vào thư mục archive/"
               " để có nghĩa mới hơn; tạm dùng OVDP.)")
         return {}
     out: dict[str, dict] = {}
@@ -386,6 +384,28 @@ def build_words() -> dict[str, dict]:
 
 
 WORDS = build_words()
+
+
+# ---------- 2b. Bộ Oxford 5000 (giọng Mỹ): cấp độ CEFR, audio, nghĩa ----------
+# Phủ lên WORDS sau khi dựng: phiên âm (để chấm) vẫn là CMUdict; words_v4.json không bị ghi đè.
+OXFORD_FILE = os.path.join(HERE, "data", "oxford_us.json")
+CEFR = ("A1", "A2", "B1", "B2", "C1")
+
+
+def load_oxford() -> dict[str, dict]:
+    try:
+        with open(OXFORD_FILE, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        print(f"(Chưa có {os.path.relpath(OXFORD_FILE, HERE)}: chạy `python3 build_oxford.py` để có cấp độ và audio.)")
+        return {}
+
+
+OXFORD = {w: o for w, o in load_oxford().items() if w in WORDS}
+for _w, _o in OXFORD.items():
+    WORDS[_w]["level"] = _o["level"]
+    if _o["vi"]:
+        WORDS[_w]["vi"] = _o["vi"]
 
 
 # ---------- 3. Tra từ gần nhất theo IPA ----------
@@ -901,14 +921,15 @@ def read_wav(path: str) -> np.ndarray:
     return audio.astype(np.float32)
 
 
-# ---------- 6. Giữ SPACE để ghi âm ----------
-# Bắt đầu ghi: chỉ khi ký tự SPACE đến từ chính cửa sổ terminal này (stdin),
-#   nên bấm SPACE ở app/tab khác sẽ không kích hoạt.
-# Dừng ghi: terminal không báo sự kiện nhả phím, nên dùng pynput để bắt.
+# ---------- 6. Bấm SPACE để ghi / dừng ----------
+# Phím đọc từ chính cửa sổ terminal này (stdin), nên bấm SPACE ở app/tab khác không có tác dụng và không cần
+# quyền Input Monitoring của macOS.
+SPACE_GAP = 0.5            # giây: dấu cách đến sát dấu cách trước (giữ phím tự lặp, bấm đúp) thì bỏ qua
+
+
 class PushToTalk:
-    def __init__(self, local_only: bool):
-        self.local_only = local_only   # True: chỉ bắt đầu khi phím đến từ stdin
-        self.space_down = False        # trạng thái phím SPACE theo pynput
+    def __init__(self):
+        self.last_space = float("-inf")   # lúc nhận dấu cách gần nhất, kể cả lần bị bỏ qua
         self.recording = False
         self.busy = False
         self.c_capture = False         # True: micro thu bằng rtmixer (main() gán)
@@ -923,6 +944,19 @@ class PushToTalk:
             with self.lock:
                 self.chunks.append(data.copy())
 
+    def toggle(self):
+        """Một lần bấm SPACE: đang ghi thì dừng, chưa ghi thì bắt đầu."""
+        import time
+        now = time.monotonic()
+        repeat = now - self.last_space < SPACE_GAP
+        self.last_space = now
+        if repeat:
+            return
+        if self.recording:
+            self.stop()
+        else:
+            self.start()
+
     def start(self):
         if self.recording or self.busy:
             return
@@ -933,7 +967,7 @@ class PushToTalk:
         with self.lock:
             self.chunks = []
         self.recording = True
-        print("● Đang ghi... (nhả SPACE để dừng)", flush=True)
+        print("● Đang ghi... (bấm SPACE lần nữa để dừng)", flush=True)
 
     def stop(self):
         if not self.recording:
@@ -944,22 +978,8 @@ class PushToTalk:
         self.busy = True
         self.jobs.put(audio)
 
-    # --- pynput (toàn hệ thống) ---
-    def on_press(self, key):
-        from pynput import keyboard
-        if key == keyboard.Key.space:
-            self.space_down = True
-            if not self.local_only:
-                self.start()
-
-    def on_release(self, key):
-        from pynput import keyboard
-        if key == keyboard.Key.space:
-            self.space_down = False
-            self.stop()
-
     # --- stdin (chỉ cửa sổ terminal này) ---
-    def read_stdin(self, fd: int, check_held: bool):
+    def read_stdin(self, fd: int):
         import select
         while True:
             try:
@@ -969,9 +989,7 @@ class PushToTalk:
             if not ch:
                 return
             if ch == b" ":
-                # pynput thấy phím trước terminal; nếu đã nhả rồi (gõ quá nhanh) thì bỏ qua
-                if not check_held or self.space_down:
-                    self.start()
+                self.toggle()
             elif ch == b"\x1b":
                 if select.select([fd], [], [], 0.05)[0]:
                     os.read(fd, 16)          # phím mũi tên v.v. -> bỏ qua
@@ -1021,24 +1039,12 @@ def open_mic(ptt: "PushToTalk"):
     return _Mic()
 
 
-def can_listen_keys() -> bool:
-    """macOS: kiểm tra quyền Input Monitoring (pynput chỉ kiểm tra Accessibility,
-    là quyền không cần cho việc nghe phím nên báo sai)."""
-    if sys.platform != "darwin":
-        return True
-    try:
-        import Quartz
-        return bool(Quartz.CGPreflightListenEventAccess())
-    except Exception:
-        return True
-
-
 # ---------- 7. Chế độ đoán từ (--guess) ----------
 # Máy đọc 1 từ ngẫu nhiên (không hiện chữ), người chơi nói lại, chấm % giống IPA của từ đó.
-LEVELS = {"easy": (5.0, 99.0), "mid": (4.0, 99.0), "hard": (3.0, 4.0), "all": (0.0, 99.0)}  # khoảng zipf
+LEVELS = {**{c.lower(): (c,) for c in CEFR}, "all": CEFR}      # --level -> các cấp CEFR được chơi
 AUTO_REVEAL = 0.9          # đạt từ mức này: tự hiện đáp án
 _ANSI = {"ok": "32", "near": "33", "bad": "31", "dim": "2", "bold": "1"}
-GUESS_KEYS = ("[giữ Space] nói  [R] nghe lại  [S] nghe chậm  [M] so âm bạn ↔ chuẩn  [A/Enter] đáp án"
+GUESS_KEYS = ("[Space] ghi/dừng  [R] nghe lại  [S] nghe chậm  [M] so âm bạn ↔ chuẩn  [A/Enter] đáp án"
               "  [N] từ mới  [Esc] thoát")
 IPA_SAY_SRC = os.path.join(HERE, "ipa_say.swift")
 IPA_SAY_BIN = os.path.join(HERE, "models", "ipa_say")
@@ -1082,44 +1088,26 @@ def _width(s: str) -> int:
     return sum(1 for ch in s if not unicodedata.combining(ch))   # t̬ chiếm 1 ô
 
 
-# Từ mẫu: bản ghi giọng người (Mỹ) trên Wikimedia Commons, tra bằng bảng data/audio_us.json {từ: đường dẫn mp3}
-# dựng sẵn từ bản dump Wiktionary của kaikki.org (build_audio.py, cách của ~/english_dictionary): không gọi API.
-# Tải 1 lần rồi giữ ở data/audio/<từ>.wav (lần sau offline). Từ không có bản ghi / tải lỗi: giọng máy macOS (`say`),
+# Từ mẫu: audio giọng Mỹ của Oxford Learner's Dictionaries (link trong data/oxford_us.json, build_oxford.py).
+# Tải 1 lần rồi giữ ở data/audio_ox/<từ>.wav (lần sau offline). Từ không có audio / tải lỗi: giọng máy macOS (`say`),
 # giọng tiếng Anh tốt nhất đã cài (Ava Premium…), đổi bằng V2I_VOICE. Cùng giọng đó đọc âm của bạn khi bấm M.
 # Giọng Premium/Enhanced tải trong System Settings > Accessibility > Spoken Content.
-COMMONS = "https://upload.wikimedia.org/wikipedia/commons/"
-AUDIO_DIR = os.path.join(HERE, "data", "audio")
-AUDIO_TABLE = os.path.join(HERE, "data", "audio_us.json")
-# Wikimedia giới hạn chặt client không ghi cách liên hệ (https://w.wiki/4wJS): đặt V2I_CONTACT="email hoặc URL"
-HTTP_UA = "voice2ipa-practice/0.2 (" + (os.environ.get("V2I_CONTACT") or "personal pronunciation practice") + ")"
+AUDIO_DIR = os.path.join(HERE, "data", "audio_ox")
+AUDIO = {w: o["a"] for w, o in OXFORD.items() if o["a"]}      # {từ: link mp3}
+HTTP_UA = "voice2ipa-practice/0.2 (personal pronunciation practice)"
 VOICES = ("Ava (Premium)", "Zoe (Premium)", "Evan (Premium)", "Ava (Enhanced)", "Zoe (Enhanced)", "Evan (Enhanced)",
           "Samantha (Enhanced)", "Allison (Enhanced)", "Tom (Enhanced)", "Samantha")
 TTS_PAD = (0.15, 0.4)      # giây im lặng thêm trước/sau: loa, tai nghe Bluetooth hay cắt mất âm đầu/cuối
 SLOW_FACTOR = 0.7          # phím S: phát chậm còn 70% tốc độ, giữ nguyên cao độ
 
 
-def load_audio_table() -> dict[str, str]:
-    try:
-        with open(AUDIO_TABLE, encoding="utf-8") as f:
-            return json.load(f)
-    except (OSError, ValueError):
-        print(f"(Chưa có {os.path.relpath(AUDIO_TABLE, HERE)}: chạy `python3 build_audio.py` để dùng bản ghi giọng người;"
-              " tạm dùng giọng máy.)")
-        return {}
-
-
-AUDIO_US = load_audio_table()
-
-
-def audio_file_name(path: str) -> str:
-    """Tên file trên Commons từ đường dẫn: transcoded/b/bd/TÊN/TÊN.mp3 hoặc b/bd/TÊN."""
-    import urllib.parse
-    parts = path.split("/")
-    return urllib.parse.unquote(parts[3] if path.startswith("transcoded/") else parts[2])
+def level_pool(level: str) -> list[str]:
+    """Các từ chơi được của một mức (--level): có cấp độ thuộc mức đó, từ 3 chữ cái."""
+    return [w for w, e in WORDS.items() if e.get("level") in LEVELS[level] and len(w) >= 3]
 
 
 def has_recording(word: str) -> bool:
-    return word in AUDIO_US or os.path.exists(os.path.join(AUDIO_DIR, word + ".wav"))
+    return word in AUDIO or os.path.exists(os.path.join(AUDIO_DIR, word + ".wav"))
 
 
 def installed_voices() -> set[str]:
@@ -1173,7 +1161,7 @@ def time_stretch(x: np.ndarray, sr: int, factor: float) -> np.ndarray:
 
 
 class Speaker:
-    """Từ mẫu: bản ghi giọng người trên Commons (bảng AUDIO_US, tải 1 lần vào data/audio/), không có hoặc tải lỗi thì
+    """Từ mẫu: audio Oxford (bảng AUDIO, tải 1 lần vào data/audio_ox/), không có hoặc tải lỗi thì
     giọng máy macOS (`say`). Phát bằng sounddevice, thêm khoảng lặng 2 đầu. Phím M: giọng máy đọc theo IPA."""
 
     def __init__(self):
@@ -1184,7 +1172,7 @@ class Speaker:
         self.ipa_bin: str | None = None          # None: chưa kiểm tra, "": không dùng được
         self.voice = best_voice()
         self.who: dict[str, str] = {}            # từ -> "người" | "máy": nguồn của lần đọc gần nhất
-        self.blocked_until = 0.0                 # Commons trả 429: không tải gì tới lúc này
+        self.blocked_until = 0.0                 # máy chủ audio trả 429: không tải gì tới lúc này
         self.word_locks: dict[str, threading.Lock] = {}   # 1 từ chỉ tải / đọc ở 1 luồng (luồng tải sẵn vs luồng chính)
         self.last_error = ""
 
@@ -1200,28 +1188,27 @@ class Speaker:
         return os.path.join(AUDIO_DIR, word + ".wav")
 
     def fetch(self, word: str) -> str | None:
-        """Đường dẫn WAV bản ghi của từ (tải mp3 từ Commons rồi đổi sang WAV nếu chưa có); None nếu không có
+        """Đường dẫn WAV bản ghi của từ (tải mp3 của Oxford rồi đổi sang WAV nếu chưa có); None nếu không có
         trong bảng hoặc tải lỗi (mất mạng, bị chặn: ghi lý do vào last_error)."""
         import subprocess
         import tempfile
         import time
         if os.path.exists(self.path(word)):
             return self.path(word)
-        src = AUDIO_US.get(word)
+        src = AUDIO.get(word)
         if not src or time.time() < self.blocked_until:
             return None
         os.makedirs(AUDIO_DIR, exist_ok=True)
         with tempfile.TemporaryDirectory() as d:
             mp3, head = os.path.join(d, "a.mp3"), os.path.join(d, "head")
-            # curl: upload.wikimedia.org hay trả 429 cho urllib của Python dù cùng User-Agent
             r = subprocess.run(["curl", "-sS", "-L", "--max-time", "8", "-A", HTTP_UA, "-o", mp3, "-D", head,
-                                "-w", "%{http_code}", COMMONS + src], capture_output=True, text=True)
+                                "-w", "%{http_code}", src], capture_output=True, text=True)
             code = int(r.stdout.strip()) if r.stdout.strip().isdigit() else 0
             if r.returncode or code != 200:
                 if code == 429:
                     m = re.findall(r"(?im)^retry-after:\s*(\d+)", open(head, errors="replace").read())
                     self.blocked_until = time.time() + (int(m[-1]) if m else 600)
-                    self.last_error = "Wikimedia tạm chặn tải (429)"
+                    self.last_error = "máy chủ audio tạm chặn tải (429)"
                 else:
                     self.last_error = f"tải bản ghi lỗi ({'HTTP ' + str(code) if code else 'mất mạng?'})"
                 return None
@@ -1236,8 +1223,8 @@ class Speaker:
         return self.path(word)
 
     def source(self, word: str) -> str:
-        """Tên file bản ghi trên Commons ("" nếu không có)."""
-        return audio_file_name(AUDIO_US[word]) if word in AUDIO_US else ""
+        """Tên file audio Oxford ("" nếu không có)."""
+        return AUDIO[word].rsplit("/", 1)[-1] if word in AUDIO else ""
 
     # --- giọng máy (`say`) ---
     def _tts(self, word: str) -> tuple[np.ndarray, int] | None:
@@ -1423,9 +1410,8 @@ class GuessMode:
         import random
         if level not in LEVELS:
             sys.exit(f"Mức không hợp lệ: {level} (chọn {', '.join(LEVELS)})")
-        lo, hi = LEVELS[level]
-        self.pool = [w for w, e in WORDS.items() if lo <= e["zipf"] < hi and len(w) >= 3]
-        if AUDIO_US:               # chỉ chơi từ có bản ghi giọng Mỹ (như trước); chưa dựng bảng thì giọng máy cả
+        self.pool = level_pool(level)
+        if AUDIO:                  # chỉ chơi từ có audio giọng Mỹ
             self.pool = [w for w in self.pool if has_recording(w)]
         random.shuffle(self.pool)
         self.session, self.level = session, level
@@ -1437,7 +1423,7 @@ class GuessMode:
 
     def intro(self):
         print(f"Chế độ ĐOÁN TỪ (mức {self.level}, {len(self.pool)} từ). Nghe rồi nói lại từ đó.")
-        print(paint("  Từ mẫu: bản ghi giọng Mỹ (Wiktionary / Wikimedia Commons); tải lỗi thì giọng máy"
+        print(paint("  Từ mẫu: audio giọng Mỹ (Oxford Learner's Dictionaries); tải lỗi thì giọng máy"
                     f" ({self.speaker.voice or 'mặc định'}). Phím M đọc âm của bạn bằng giọng máy.", "dim"))
         print(paint(GUESS_KEYS, "dim"))
 
@@ -1450,7 +1436,7 @@ class GuessMode:
         self.word = self.pool.pop()
         self.best, self.tries, self.revealed, self.correct, self.last = 0.0, 0, False, False, None
         self.cmp = None            # IPA âm bạn nói (dạng Apple), để bấm M
-        print(f"\n── Từ #{len(self.history) + 1} ──  🔊")
+        print(f"\n── Từ #{len(self.history) + 1} · {WORDS[self.word]['level']} ──  🔊")
         who = self.speaker.say(self.word)
         if who == "máy" and has_recording(self.word):
             print(paint(f"  (giọng máy: {self.speaker.last_error or 'chưa tải được bản ghi'})", "dim"))
@@ -1476,7 +1462,7 @@ class GuessMode:
             print(f"     chuẩn : {top}\n     bạn   : {bot}")
         src = self.speaker.source(self.word)
         if src and not self.revealed and self.speaker.who.get(self.word) == "người":
-            print(paint(f"     bản ghi: {src} (Wikimedia Commons)", "dim"))
+            print(paint(f"     audio: {src} (Oxford Learner's Dictionaries © OUP)", "dim"))
         if not self.revealed:
             self.session.log({"event": "guess_reveal", "word": self.word, "best": round(self.best * 100),
                               "tries": self.tries})
@@ -1495,7 +1481,7 @@ class GuessMode:
             self.new_word()
         elif ch == "m":
             if not self.cmp:
-                print("  Nói thử trước đã (giữ Space), rồi bấm M để nghe âm của bạn và âm chuẩn.")
+                print("  Nói thử trước đã (bấm Space), rồi bấm M để nghe âm của bạn và âm chuẩn.")
             elif self.speaker.say_compare(self.cmp, self.word):
                 print("  🔊 âm của bạn (giọng máy) … rồi bản ghi chuẩn")
             else:
@@ -1577,12 +1563,12 @@ class GuessMode:
 # ---------- 7b. Game leo tháp (--game) ----------
 # Như --guess, nhưng có nhân vật leo tháp (vẽ bằng tower.py): bắt đầu ở tầng 50, lên 100 thắng, rơi về 0 thua.
 GAME_NEAR = 0.6            # % âm từ mức này tới dưới AUTO_REVEAL: gần đúng, đứng yên; thấp hơn: rơi 1 tầng
-GAME_KEYS = ("[giữ Space] nói  [C] cược  [R] nghe lại  [S] nghe chậm  [M] so âm bạn ↔ chuẩn  [A] đáp án"
+GAME_KEYS = ("[Space] ghi/dừng  [C] cược  [R] nghe lại  [S] nghe chậm  [M] so âm bạn ↔ chuẩn  [A] đáp án"
              "  [N] từ mới  [Esc] thoát")
 
 
 def is_hard(w: str) -> bool:
-    """Từ khó (để cược) = từ có 2 âm tiết trở lên (đếm nguyên âm trong cách đọc đầu tiên)."""
+    """Từ dài (cược lớn) = từ có 2 âm tiết trở lên (đếm nguyên âm trong cách đọc đầu tiên). Khác với cấp độ CEFR."""
     return sum(1 for p in WORDS[w]["ph"][0] if p in ipa_us.VOWELS) >= 2
 
 
@@ -1624,9 +1610,7 @@ class GameMode(GuessMode):
         print(paint(f"  [A] đáp án / [N] bỏ từ khi chưa đúng: −{tower.GIVE_UP} tầng (sau đó luyện thoải mái,"
                     " không bị trừ).", "dim"))
         print(paint(f"  Mỗi {tower.MILESTONE} từ đúng ngay lần đầu: +1 lượt cược. [C] cược trước khi nói:"
-                    f" từ dễ (1 âm tiết) +{ew}/−{el}, từ khó +{hw}/−{hl}, gần đúng thì mất lượt.", "dim"))
-        if not can_listen_keys():
-            print(paint("  ⚠ Terminal chưa có quyền Input Monitoring: không bắt được lúc nhả Space.", "bad"))
+                    f" từ ngắn (1 âm tiết) +{ew}/−{el}, từ dài +{hw}/−{hl}, gần đúng thì mất lượt.", "dim"))
         self.session.log({"event": "game_start", "level": self.level, "start": t.start, "goal": t.goal})
 
     def hud(self) -> list[str]:
@@ -1638,7 +1622,7 @@ class GameMode(GuessMode):
         elif self.tower.over:
             status = paint("[N] chơi lại", "bold")
         else:
-            status = paint("🔊 nghe rồi giữ Space nói lại", "dim")
+            status = paint("🔊 nghe rồi bấm Space nói lại", "dim")
         return ["", status]
 
     def new_word(self):
@@ -1677,7 +1661,7 @@ class GameMode(GuessMode):
             print(paint(f"  Không cược được: {why}.", "dim"))
             return
         win, lose = t.bet_odds()
-        kind = "khó" if t.cur.hard else "dễ"
+        kind = "dài" if t.cur.hard else "ngắn"
         print(paint(f"  🎲 Đã cược từ {kind}: nói đúng ngay +{win} tầng, sai −{lose}, gần đúng mất lượt.", "near"))
         self.session.log({"event": "game_bet", "word": self.word, "hard": t.cur.hard, "win": win, "lose": lose})
         t.push(("bet", 0, False))
@@ -1745,7 +1729,7 @@ class GameMode(GuessMode):
 # sáng, đủ điểm. Bí thì bấm G: gợi ý 1 từ, đọc theo giống >= 80%: sao mờ, 1/3 điểm. Không tính giờ.
 HUNT_PASS = 0.8            # gợi ý: % âm giống tối thiểu để qua
 HUNT_FEW = 10              # cảnh báo khi kho từ gợi ý ít hơn số này
-HUNT_KEYS = ("[giữ Space] nói 1 từ  [G] gợi ý  [R] nghe lại  [S] nghe chậm  [N] bỏ gợi ý  [L] từ đã thắp"
+HUNT_KEYS = ("[Space] ghi/dừng  [G] gợi ý  [R] nghe lại  [S] nghe chậm  [N] bỏ gợi ý  [L] từ đã thắp"
              "  [Esc] thoát")
 HUNT_MENU = (  # (âm Cambridge US, từ ví dụ)
     ("iː", "see"), ("ɪ", "sit"), ("e", "bed"), ("æ", "cat"), ("ɑː", "hot"), ("ɔː", "four"), ("ʌ", "cup"),
@@ -1776,9 +1760,7 @@ def hunt_variant(w: str, keys: set) -> int | None:
 
 
 def hunt_pool(keys: set, level: str) -> list[str]:
-    lo, hi = LEVELS[level]
-    return [w for w, e in WORDS.items()
-            if lo <= e["zipf"] < hi and len(w) >= 3 and hunt_variant(w, keys) is not None]
+    return [w for w in level_pool(level) if hunt_variant(w, keys) is not None]
 
 
 def parse_sounds(text: str) -> list[str]:
@@ -1861,14 +1843,16 @@ def after_playback(fn):
 
 
 def hunt_points(w: str, keys: set) -> tuple[int, int]:
-    """(điểm khi tự nói ra từ, tier). Nhiều âm mục tiêu, ít gặp (zipf thấp), dài: nhiều điểm hơn.
-    tier 3 = từ khó (ít gặp hoặc dài) -> sao vàng; tier 2 = sao trắng."""
+    """(điểm khi tự nói ra từ, tier). Nhiều âm mục tiêu, cấp độ cao, dài: nhiều điểm hơn. Từ ngoài bộ Oxford
+    tính theo độ phổ biến (zipf). tier 3 = từ khó (B2, C1 hoặc dài) -> sao vàng; tier 2 = sao trắng."""
     k = hunt_variant(w, keys) or 0
     ph = WORDS[w]["ph"][k]
     hits = sum(1 for p in ph if hunt_key(p) in keys)
-    zipf = WORDS[w]["zipf"]
-    pts = 10 * max(1, hits) * (1 + max(0.0, 5.5 - zipf) * 0.5) * (1 + max(0, len(ph) - 4) * 0.1)
-    return round(pts), 3 if zipf < 4.0 or len(ph) >= 7 else 2
+    level, zipf = WORDS[w].get("level"), WORDS[w]["zipf"]
+    rarity = CEFR.index(level) * 0.25 if level else max(0.0, 5.5 - zipf) * 0.5
+    pts = 10 * max(1, hits) * (1 + rarity) * (1 + max(0, len(ph) - 4) * 0.1)
+    hard = level in ("B2", "C1") if level else zipf < 4.0
+    return round(pts), 3 if hard or len(ph) >= 7 else 2
 
 
 class HuntMode:
@@ -1906,8 +1890,6 @@ class HuntMode:
                     " nói sai không mất gì.", "dim"))
         print(paint("  Tự nghĩ ra từ: sao sáng, đủ điểm (từ khó: sao vàng). Bí: [G] gợi ý 1 từ, đọc theo giống"
                     f" >= {round(HUNT_PASS * 100)}%: sao mờ, 1/3 điểm.", "dim"))
-        if not can_listen_keys():
-            print(paint("  ⚠ Terminal chưa có quyền Input Monitoring: không bắt được lúc nhả Space.", "bad"))
         self._prepare_next()
 
     def hud(self) -> list[str]:
@@ -1919,7 +1901,7 @@ class HuntMode:
         elif self.state == "hint":
             status = paint("Đọc theo: ", "dim") + paint(self.hint, "bold") + paint("  [N] bỏ gợi ý", "dim")
         else:
-            status = paint(f"Giữ Space, nói 1 từ chứa {self.names}", "dim")
+            status = paint(f"Bấm Space, nói 1 từ chứa {self.names}", "dim")
         return ["", status]
 
     # --- chọn từ gợi ý ---
@@ -1927,12 +1909,12 @@ class HuntMode:
         return [w for w in self.pool if w not in self.used]
 
     def _pick(self, avoid: str | None = None) -> str | None:
-        """Ưu tiên từ đã tải bản ghi, rồi từ có bản ghi trên Commons, cuối cùng từ chỉ đọc được bằng giọng máy."""
+        """Ưu tiên từ đã tải bản ghi, rồi từ có audio Oxford, cuối cùng từ chỉ đọc được bằng giọng máy."""
         free = [w for w in self._free() if w != avoid] or self._free()
         if not free:
             return None
         return (next((w for w in free if os.path.exists(Speaker.path(w))), None)
-                or next((w for w in free if w in AUDIO_US), None) or free[0])
+                or next((w for w in free if w in AUDIO), None) or free[0])
 
     def _prepare_next(self):
         """Tải sẵn bản ghi từ gợi ý kế tiếp ở nền."""
@@ -1961,7 +1943,8 @@ class HuntMode:
         return "".join(out) + ipa[pos:]
 
     def _card(self, w: str) -> str:
-        return f"{paint(w, 'bold')}  /{self._ipa_marked(w)}/  →  {WORDS[w]['vi']}"
+        level = f" [{WORDS[w]['level']}]" if "level" in WORDS[w] else ""
+        return f"{paint(w, 'bold')}{level}  /{self._ipa_marked(w)}/  →  {WORDS[w]['vi']}"
 
     def _speak(self, w: str, slow: bool = False):
         self.speaker.say(w, slow)
@@ -1974,7 +1957,7 @@ class HuntMode:
         """Mời nói từ cho ngôi sao kế tiếp (không có lượt máy)."""
         self.state, self.hint, self.tries, self.best = "free", None, 0, 0.0
         print("\n" + paint(f"── Sao #{self._lit() + 1} ──", "bold")
-              + paint(f"  giữ Space nói 1 từ chứa {self.names}  ·  bí thì [G] gợi ý", "dim"))
+              + paint(f"  bấm Space nói 1 từ chứa {self.names}  ·  bí thì [G] gợi ý", "dim"))
 
     def give_hint(self):
         w = self._hint_word()
@@ -1985,7 +1968,7 @@ class HuntMode:
             self.used[self.hint] = "bỏ"
         self.state, self.hint, self.word, self.best, self.tries = "hint", w, w, 0.0, 0
         print("  " + paint("[G] Gợi ý: ", "dim") + self._card(w) + "  🔊")
-        print(paint(f"  Đọc theo (giữ Space), cần >= {round(HUNT_PASS * 100)}%.  [R] nghe lại  [S] nghe chậm"
+        print(paint(f"  Đọc theo (bấm Space), cần >= {round(HUNT_PASS * 100)}%.  [R] nghe lại  [S] nghe chậm"
                     "  [G] từ khác  [N] bỏ gợi ý", "dim"))
         self._speak(w)
         self.session.log({"event": "hunt_hint", "word": w})
@@ -2061,7 +2044,7 @@ class HuntMode:
             info.update({"verdict": "hint_ok", "points": pts})
             self.new_word()
         else:
-            print(paint(f"  Chưa đủ {round(HUNT_PASS * 100)}%: đọc lại (giữ Space), [R] nghe lại,"
+            print(paint(f"  Chưa đủ {round(HUNT_PASS * 100)}%: đọc lại (bấm Space), [R] nghe lại,"
                         " [G] từ khác, [N] bỏ gợi ý.", "dim"))
         return info
 
@@ -2131,13 +2114,12 @@ class HuntMode:
                           "constellations": s.done, "score": s.score})
 
 
-def main(mode: str = "lookup", level: str = "mid", sounds: list[str] | None = None):
-    import logging
+def main(mode: str = "lookup", level: str = "a1", sounds: list[str] | None = None):
     import sounddevice as sd
-    from pynput import keyboard
+    import termios
 
-    logging.getLogger("pynput").setLevel(logging.ERROR)   # ẩn cảnh báo "not trusted" sai
-
+    if not sys.stdin.isatty():
+        sys.exit("Cần chạy trong terminal tương tác để bấm Space ghi / dừng.")
     load_model()
     recognize(pad_audio(np.zeros(SR, np.float32)))     # chạy thử 1 lần để lần ghi đầu không bị chậm
     session = Session()
@@ -2145,43 +2127,28 @@ def main(mode: str = "lookup", level: str = "mid", sounds: list[str] | None = No
             else GameMode(session, level) if mode == "game"
             else HuntMode(session, level, sounds) if mode == "hunt" else None)
 
-    fd = sys.stdin.fileno() if sys.stdin.isatty() else None
-    ptt = PushToTalk(local_only=fd is not None)
+    fd = sys.stdin.fileno()
+    ptt = PushToTalk()
     if game:
         ptt.on_start = game.speaker.stop
         game.ptt = ptt
-    old_tty = None
-    if fd is not None:
-        import termios
-        old_tty = termios.tcgetattr(fd)
-        new = termios.tcgetattr(fd)
-        new[3] &= ~(termios.ECHO | termios.ICANON)   # không in dấu cách ra màn hình
-        new[6][termios.VMIN] = 1
-        new[6][termios.VTIME] = 0
-        termios.tcsetattr(fd, termios.TCSANOW, new)
+    old_tty = termios.tcgetattr(fd)
+    new = termios.tcgetattr(fd)
+    new[3] &= ~(termios.ECHO | termios.ICANON)   # không in dấu cách ra màn hình
+    new[6][termios.VMIN] = 1
+    new[6][termios.VTIME] = 0
+    termios.tcsetattr(fd, termios.TCSANOW, new)
 
-    listener = keyboard.Listener(on_press=ptt.on_press, on_release=ptt.on_release)
     try:
         stream = open_mic(ptt)
         with stream:
-            listener.start()
-            listener.wait()
-            trusted = can_listen_keys()
-            if not trusted:
-                print("⚠ Terminal chưa có quyền Input Monitoring nên không bắt được lúc nhả phím.\n"
-                      "  Bật trong System Settings > Privacy & Security > Input Monitoring,\n"
-                      "  rồi mở lại terminal.")
-            if fd is not None:
-                threading.Thread(target=ptt.read_stdin, args=(fd, trusted),
-                                 daemon=True).start()
+            threading.Thread(target=ptt.read_stdin, args=(fd,), daemon=True).start()
             print(f"\nBản ghi: recordings/{session.name}/   Log: logs/{session.name}.log")
             if game:
-                if fd is None:
-                    print("⚠ Không có terminal tương tác: không bấm được phím lệnh.")
                 game.intro()
                 game.new_word()
             else:
-                print("Giữ SPACE (trong cửa sổ này) để nói 1 từ tiếng Anh, nhả ra để dừng."
+                print("Bấm SPACE (trong cửa sổ này) để ghi 1 từ tiếng Anh, bấm lần nữa để dừng."
                       " Esc / Ctrl+C để thoát.\n")
             while True:
                 audio = ptt.jobs.get()
@@ -2193,7 +2160,7 @@ def main(mode: str = "lookup", level: str = "mid", sounds: list[str] | None = No
                     continue
                 try:
                     if len(audio) < SR * MIN_SECONDS:
-                        print("  Quá ngắn, giữ SPACE lâu hơn.\n")
+                        print("  Quá ngắn: nói xong cả từ rồi mới bấm SPACE dừng.\n")
                         session.log({"event": "too_short", "seconds": round(len(audio) / SR, 2)})
                     else:
                         sd.play(audio, SR)     # phát lại bản ghi (chạy nền, song song với phân tích)
@@ -2205,15 +2172,12 @@ def main(mode: str = "lookup", level: str = "mid", sounds: list[str] | None = No
                             info = {"error": repr(e), "traceback": traceback.format_exc()}
                         session.save(audio, info, label=game.word if game else None)
                 finally:
-                    if fd is not None:
-                        termios.tcflush(fd, termios.TCIFLUSH)
+                    termios.tcflush(fd, termios.TCIFLUSH)
                     ptt.busy = False
     except KeyboardInterrupt:
         pass
     finally:
-        listener.stop()
-        if old_tty is not None:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old_tty)
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_tty)
         if game:
             game.speaker.stop()
             game.summary()
@@ -2229,18 +2193,16 @@ def analyze_files(paths: list[str]):
         analyze(read_wav(path))
 
 
-FETCH_PACE = 1.0           # giây nghỉ giữa 2 lần tải (upload.wikimedia.org chặn nếu tải dồn)
+FETCH_PACE = 1.0           # giây nghỉ giữa 2 lần tải, tránh dồn lên máy chủ audio
 
 
 def fetch_audio(level: str):
-    """Tải dần bản ghi giọng Mỹ của các từ ở 1 mức vào data/audio/ (từ phổ biến trước), để lúc chơi chạy offline.
+    """Tải dần audio giọng Mỹ của các từ ở 1 mức vào data/audio_ox/ (từ phổ biến trước), để lúc chơi chạy offline.
     Bị chặn (429) thì chờ hết thời gian máy chủ yêu cầu. Ctrl+C để dừng, lần sau chạy lại sẽ làm tiếp."""
     import time
     if level not in LEVELS:
         sys.exit(f"Mức không hợp lệ: {level} (chọn {', '.join(LEVELS)})")
-    lo, hi = LEVELS[level]
-    words = sorted((w for w, e in WORDS.items() if lo <= e["zipf"] < hi and len(w) >= 3 and w in AUDIO_US),
-                   key=lambda w: -WORDS[w]["zipf"])
+    words = sorted((w for w in level_pool(level) if w in AUDIO), key=lambda w: -WORDS[w]["zipf"])
     sp = Speaker()
     todo = [w for w in words if not os.path.exists(sp.path(w))]
     print(f"Mức {level}: {len(words)} từ có bản ghi, cần tải {len(todo)}.")
@@ -2268,10 +2230,10 @@ if __name__ == "__main__":
         k = args.index("--model")
         MODEL_KIND = args[k + 1] if k + 1 < len(args) else ""
         del args[k:k + 2]
-    level = "mid"
-    if "--level" in args:                       # --level easy | mid | hard | all (chế độ đoán từ)
+    level = None
+    if "--level" in args:                       # --level a1 | a2 | b1 | b2 | c1 | all
         k = args.index("--level")
-        level = args[k + 1] if k + 1 < len(args) else ""
+        level = args[k + 1].lower() if k + 1 < len(args) else ""
         del args[k:k + 2]
     sounds = None
     if "--sounds" in args:                      # --sounds "æ t" (chế độ săn từ, bỏ qua bước hỏi)
@@ -2288,6 +2250,8 @@ if __name__ == "__main__":
     if "--hunt" in args:
         args.remove("--hunt")
         mode = "hunt"
+    if level is None:                           # săn từ: gợi ý từ mọi cấp; còn lại bắt đầu từ A1
+        level = "all" if mode == "hunt" else "a1"
     if "--fetch-audio" in args:                 # tải sẵn bản ghi của 1 mức để chơi offline
         fetch_audio(level)
     elif args:
